@@ -1,10 +1,14 @@
 package ffeatureextractor.actions;
 
+import java.io.File;  
+import java.io.IOException;  
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.PrintStream;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -45,9 +49,14 @@ import org.eclipse.ui.IWorkbenchWindowActionDelegate;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.dialogs.ElementListSelectionDialog;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonIOException;
+
 import ca.uqam.latece.aspects.extractor.input.impl.ReverseInheritanceRelationBuilder;
 import ca.uqam.latece.aspects.extractor.lattice.LatticeBuilder;
 import ca.uqam.latece.aspects.extractor.lattice.graph.model.Node;
+import ca.uqam.latece.aspects.extractor.lattice.graph.model.NodeFeatureType;
 import ca.uqam.latece.aspects.extractor.lattice.impl.LatticeBuilderImpl;
 import ca.uqam.latece.aspects.extractor.lattice.model.Lattice;
 import ca.uqam.latece.aspects.extractor.lattice.model.Relation;
@@ -173,7 +182,7 @@ public class FeatureExtractionAction implements IWorkbenchWindowActionDelegate {
 		// LatticeGraphGenerator latticeGraphGenerator = new LatticeGraphGenerator();
 		// aLattice.acceptTopVisitor(latticeGraphGenerator);
 
-		// emd (imen)
+		// end (imen)
 
 		// 6. now identify candidate features
 		// 6.1 First, purge extents of non-minimas, and print new lattice
@@ -214,19 +223,19 @@ public class FeatureExtractionAction implements IWorkbenchWindowActionDelegate {
 		aLattice.acceptTopVisitor(printCandidatesVisitor);
 		System.out.println("Done printing candidate nodes!");
 
-		// donne vrai
+		LatticeGraphGenerator latticeGraphGenerator = new LatticeGraphGenerator(
+				featureDetector.getCandidateFeatureNodes());
+		
+		aLattice.acceptTopVisitor(latticeGraphGenerator);
 		System.out.println(Platform.isRunning());
-		// MessageDialog.openInformation(window.getShell(),
-		// "Ffeature-extractor", "Hello, Eclipse world");
-
-		// 5,1 building the view plugin and display lattice nodes (imen)
+		
+		// 5.1 building the view plugin and display lattice nodes (imen)
 		IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
 		IViewPart viewPart = page.findView("ffeatureExtractor.viewpart.LatticeGraph");
 		LatticeGraph graphView = (LatticeGraph) viewPart;
-		graphView.updateLabel(RemoveNonCandidateNodes(printCandidatesVisitor.getNodes()));
-
-		// graphView.updateLabel(printCandidatesVisitor.getNodes());
-
+		graphView.updateLabel(RemoveNonCandidateNodes(printCandidatesVisitor.getNodes(), aLattice));
+		generateStaticsFile(printCandidatesVisitor.getNodes());
+		
 	}
 
 	/**
@@ -289,7 +298,6 @@ public class FeatureExtractionAction implements IWorkbenchWindowActionDelegate {
 								: "UNRESOLVED." + superClassName);
 						extensions.add(resolvedName);
 					}
-					// System.out.println("Type : " + type.getElementName() +
 					// " extends "+ resolvedName);
 
 					// implemented interfaces
@@ -763,7 +771,7 @@ public class FeatureExtractionAction implements IWorkbenchWindowActionDelegate {
 	 * @param candidates
 	 *
 	 */
-	void processCandidateInstancesMultipleInheritance(IJavaProject jProject,
+void processCandidateInstancesMultipleInheritance(IJavaProject jProject,
 			Collection<MultipleInheritanceRecord> candidates) {
 		try {
 			String outputFileName = "../" + jProject.getElementName() + "_multiple_inheritance.out";
@@ -825,13 +833,13 @@ public class FeatureExtractionAction implements IWorkbenchWindowActionDelegate {
 	}
 
 	/**
-	 * removes non candidates node from nodes 
+	 * removes non candidates node from nodes to d
 	 *  
 	 * @param nodes is a list that represents the graph that contains a copy of the lattice to display in the view lattice graph
 	 * @return
 	 * by (imen)
 	 */
-    private List<Node> RemoveNonCandidateNodes(List<Node> nodes) {
+    private List<Node> RemoveNonCandidateNodes(List<Node> nodes, Lattice aLattice ) {
     	
     
 		
@@ -850,19 +858,11 @@ public class FeatureExtractionAction implements IWorkbenchWindowActionDelegate {
 				}
 			}
 		}		
-		/*System.out.println("display nodes");
-		for (Node node : nodes) {
-			System.out.println("display node: " + node.getName() + "-- " +node.getTypes());	
-			List<Node> children = node.getChildren();
-			for (Node child : children) {
-				System.out.println("	children: " + child.getName() + "-- " +child.getTypes());			
-			}
-		}		
-		*/
 		
-		
-		
-		
+//		
+//		
+//		
+//		
 		//for each mode if one child is non candidate assign his children to his parents 		
 		List<Node> nodesToRemove = new ArrayList<Node>();
 		for (int i = nodes.size()-1; i>=0; i--) {
@@ -874,25 +874,16 @@ public class FeatureExtractionAction implements IWorkbenchWindowActionDelegate {
 				}
 			}
 		}
-		
-		
-	//for each mode if one child is non candidate assign his children to his parents 		
-				
-		/*ystem.out.println("new display nodes");
-		for (Node node : nodes) {
-			System.out.println("new display node: " + node.getName() + "-- " +node.getTypes()+ "--" + node.getExtent());	
-			List<Node> children = node.getChildren();
-			for (Node child : children) {
-				System.out.println("	new children: " + child.getName() + "-- " +child.getTypes());			
-			}
-		}	*/
-		//remove no candidate nodes from the list 
+//		
+//		
+//	
+//		//remove no candidate nodes from the list 
 		for (Node node : nodes) {
 			//System.out.println(" node" + node.getName() + "--" + node.getType());
+		
 			if (node.getTypes().isEmpty()  && node.getName() != null) {
 				//System.out.pr0intln("removed node" + node.getName() + "--" + node.getType());
-				nodesToRemove.add(node);
-			}
+				nodesToRemove.add(node);			}
 		}		
 		nodes.removeAll(nodesToRemove);
 		// remove children of the non candidate nodes 		
@@ -908,8 +899,37 @@ public class FeatureExtractionAction implements IWorkbenchWindowActionDelegate {
 			}children.removeAll(removedChildren);
 		}	
 		
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		try {
+			Writer writer = new FileWriter(project.getLocation().toString()+"/"+project.getName()+"_"+"lattice.json");
+			gson.toJson(nodes,writer);
+			writer.flush();    
+		    writer.close(); 
+		} catch (JsonIOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		
+		try {
+			Writer writer = new FileWriter(project.getLocation().toString()+"/"+project.getName()+"_"+"latticeClean.json");
+			
+			gson.toJson(aLattice.getTop(),writer);
+			writer.flush();    
+		    writer.close(); 
+		} catch (JsonIOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		
+		 
+	        
+	        
 		
 		FileOutputStream fos;
 		ObjectOutputStream oos;
@@ -935,5 +955,78 @@ public class FeatureExtractionAction implements IWorkbenchWindowActionDelegate {
 		
 		return nodes;
 	}
+    
+  private int getTotalNumberOfCandidateNodes(List<Node> nodes ) {
+    	   
+   return nodes.size();	
+    
+  }
+  private int getTotalNumberOfAdhocNodes(List<Node> nodes ) {
+	   int numberAdhocs = -1; // to ignore the root of the lattice that is an empty node
+	  for (Node node : nodes) {
+		  if (node.getTypes()!=null && !node.getTypes().isEmpty()) {
+			if (node.getTypes().get(0).toString().contains("ADHOC"))
+				numberAdhocs ++;
+			}
+	  }
+	  return numberAdhocs;
+}
+  
+  private int getTotalNumberOfInterfaceNodes(List<Node> nodes ) {
+	   int numberInterface = 0;
+	  for (Node node : nodes) {
+		  if (node.getTypes()!=null && !node.getTypes().isEmpty()) {
+			if (node.getTypes().get(0).toString().contains("INTERFACE"))
+				numberInterface ++;
+			}
+	  }
+	  return numberInterface;
+}
+  private int getTotalNumberOfSubclassNodes(List<Node> nodes ) {
+	   int numberSubclass = 0;
+	  
+	  for (Node node : nodes) {
+		  if (node.getTypes()!=null && !node.getTypes().isEmpty()) {
+			if (node.getTypes().get(0).toString().contains("CLASS_SUBCLASS"))
+				numberSubclass ++;
+			}
+	   }
+	  return numberSubclass;
+}
+  private int getTotalNumberOfAggregationNodes(List<Node> nodes ) {
+		int numberAggregations = 0;
+		 
+	  for (Node node : nodes) {
+		  if (node.getTypes()!=null && !node.getTypes().isEmpty()) {
+			if (node.getTypes().get(0).toString().contains("AGGREGATIONS"))
+				numberAggregations ++;
+			}
+		 }
+	  return numberAggregations;
+}
 
+  
+  private String generateStatistics(List<Node> nodes ) {
+	  
+	  String total = "#nodes : " + getTotalNumberOfCandidateNodes(nodes);
+	  String adhoc = "#adhoc : " + getTotalNumberOfAdhocNodes(nodes);
+	  String subclass = "#subclass : " + getTotalNumberOfSubclassNodes(nodes);
+	  String interfaces = "#interface : " + getTotalNumberOfInterfaceNodes(nodes);
+	  String aggregation = "#aggregations : " + getTotalNumberOfAggregationNodes(nodes);
+	  
+	  return total+ "\n"+adhoc+ "\n"+subclass+ "\n"+interfaces+ "\n"+aggregation+ "\n";
+  }
+  
+  private void generateStaticsFile(List<Node> nodes ) {
+	  try {
+		  
+		  FileWriter myWriter = new FileWriter(project.getLocation().toString()+"/"+project.getName()+"_"+"latticeStatistics.txt");
+	      myWriter.write(generateStatistics(nodes));
+	      myWriter.close();
+	    	      
+	    } catch (IOException e) {
+	      System.out.println("An error occurred.");
+	      e.printStackTrace();
+	    }
+  }
 }

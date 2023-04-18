@@ -18,7 +18,10 @@ public class ZestLabelProvider extends LabelProvider implements IColorProvider {
 	public String getText(Object element) {
 		if (element instanceof Node) {
 			Node myNode = (Node) element;
-			return myNode.getName();
+			//dispaly the name of node
+			//return myNode.getName();
+			//display the hash code of the node
+			return String.valueOf(myNode.getID());
 		}
 		
 		if (element instanceof EntityConnectionData) {
