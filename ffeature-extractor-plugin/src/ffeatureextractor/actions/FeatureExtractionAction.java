@@ -914,7 +914,7 @@ void processCandidateInstancesMultipleInheritance(IJavaProject jProject,
 		}
 		
 		try {
-			Writer writer = new FileWriter(project.getLocation().toString()+"/"+project.getName()+"_"+"latticeClean.json");
+			Writer writer = new FileWriter(project.getLocation().toString()+"/"+project.getName()+"_"+"latticexx.json");
 			
 			gson.toJson(aLattice.getTop(),writer);
 			writer.flush();    
